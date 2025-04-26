@@ -26,7 +26,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6 text-gray-900">
-      <h1 className="text-3xl font-bold mb-6 text-center">CyberPulse</h1>
+      <h1 className="text-3xl font-bold mb-6">CyberPulse</h1>
 
       <label className="mb-2 flex flex-col items-start w-full max-w-md">
         <span className="mb-1 font-medium">Intervalo de rede:</span>
@@ -41,15 +41,20 @@ export default function Home() {
       <button
         onClick={iniciarAnalise}
         disabled={loading}
-        className="mt-4 bg-blue-600 disabled:opacity-50 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mb-6"
+        className="mt-4 bg-blue-600 disabled:opacity-50 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mb-4"
       >
         {loading ? 'Analisando...' : 'Iniciar Análise'}
       </button>
 
-      {error && (
-        <div className="text-red-600 font-medium mb-4">
-          {error}
+      {/* Barra de progresso indeterminada */}
+      {loading && (
+        <div className="w-full max-w-md h-2 bg-gray-200 rounded overflow-hidden mb-6">
+          <div className="h-2 bg-blue-500 animate-[progress_1.5s_linear_infinite]"></div>
         </div>
+      )}
+
+      {error && (
+        <div className="text-red-600 font-medium mb-4">{error}</div>
       )}
 
       {result && (
