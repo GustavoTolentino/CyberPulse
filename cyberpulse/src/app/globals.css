@@ -1,28 +1,121 @@
-/* 1. Diretivas do Tailwind */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* 2. Variáveis de tema claro */
+/* Variáveis de cores */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f4f6;
+  --foreground: #111827;
+  --card-bg: #ffffff;
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --border: #d1d5db;
+  --error: #dc2626;
 }
 
-/* 3. Dark mode via media query */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-/* 4. Aplicando cores e fonte padrão */
 body {
-  background-color: var(--background);
+  margin: 0;
+  padding: 0;
+  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Segoe UI', Arial, sans-serif;
 }
 
-/* 5. Animação da barra de progresso indeterminada */
+/* Container central */
+.card {
+  background: var(--card-bg);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  max-width: 600px;
+  margin: 80px auto;
+  text-align: center;
+}
 
+.card h1 {
+  margin-top: 0;
+  font-size: 1.75rem;
+}
+
+.form-group {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+/* Botão principal */
+.btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn:hover {
+  background: var(--primary-dark);
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Barra de progresso indeterminada */
+.progress {
+  position: relative;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 16px 0;
+}
+.progress::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: var(--primary);
+  animation: loading 1s infinite;
+}
+@keyframes loading {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+/* Estilos de erro e resultados */
+.error {
+  color: var(--error);
+  margin-top: 12px;
+}
+
+.results {
+  margin-top: 24px;
+  text-align: left;
+}
+
+.results h2 {
+  margin-top: 0;
+}
+
+.results ul {
+  padding-left: 20px;
+}
+
+.results ul ul {
+  padding-left: 16px;
+}
+
+.results em {
+  color: var(--border);
+}

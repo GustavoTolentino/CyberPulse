@@ -1,23 +1,26 @@
 'use client'
-
+import './globals.css'
 import { useState } from 'react'
 
 export default function Home() {
   const [range, setRange] = useState('192.168.1.0/24')
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState(null)
+  const [devices, setDevices] = useState(null)
   const [error, setError] = useState(null)
 
   const iniciarAnalise = async () => {
+    console.log(`Iniciando análise para range: ${range}`)
     setLoading(true)
-    setResult(null)
+    setDevices(null)
     setError(null)
     try {
       const res = await fetch(`/api/scan?range=${encodeURIComponent(range)}`)
+      console.log('Fetch concluído, status:', res.status)
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro desconhecido')
-      setResult(data)
+      console.log('Dados recebidos:', data)
+      setDevices(data.devices)
     } catch (err) {
+      console.error('Erro na análise:', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -25,53 +28,45 @@ export default function Home() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6 text-gray-900">
-      <h1 className="text-3xl font-bold mb-6">CyberPulse</h1>
+    <main className="card">
+      <h1>Analisador de Vulnerabilidades</h1>
 
-      <label className="mb-2 flex flex-col items-start w-full max-w-md">
-        <span className="mb-1 font-medium">Intervalo de rede:</span>
+      <div className="form-group">
+        <label htmlFor="range">Intervalo de rede:</label>
         <input
+          id="range"
           type="text"
           value={range}
           onChange={e => setRange(e.target.value)}
-          className="w-full p-2 border rounded text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-      </label>
+      </div>
 
-      <button
-        onClick={iniciarAnalise}
-        disabled={loading}
-        className="mt-4 bg-blue-600 disabled:opacity-50 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg mb-4"
-      >
+      <button onClick={iniciarAnalise} disabled={loading} className="btn">
         {loading ? 'Analisando...' : 'Iniciar Análise'}
       </button>
 
       {/* Barra de progresso indeterminada */}
-      {loading && (
-        <div className="w-full max-w-md h-2 bg-gray-200 rounded overflow-hidden mb-6">
-          <div className="h-2 bg-blue-500 animate-[progress_1.5s_linear_infinite]"></div>
-        </div>
-      )}
+      {loading && <div className="progress"></div>}
 
-      {error && (
-        <div className="text-red-600 font-medium mb-4">{error}</div>
-      )}
+      {/* Erro */}
+      {error && <p className="error">{error}</p>}
 
-      {result && (
-        <div className="w-full max-w-2xl bg-white p-6 rounded-lg shadow-md text-gray-900">
-          <h2 className="text-2xl font-bold mb-4">Resultados:</h2>
-          <ul className="list-disc list-inside space-y-2">
-            {result.devices.map((device, i) => (
-              <li key={i}>
+      {/* Resultados */}
+      {devices && (
+        <div className="results">
+          <h2>Resultados:</h2>
+          <ul>
+            {devices.map((device, idx) => (
+              <li key={idx}>
                 <strong>{device.ip}</strong> — {device.status}
                 {device.openPorts.length > 0 ? (
-                  <ul className="list-disc list-inside ml-5 text-sm">
-                    {device.openPorts.map((p, j) => (
-                      <li key={j}>Porta {p.port}: {p.service}</li>
+                  <ul>
+                    {device.openPorts.map((port, j) => (
+                      <li key={j}>Porta {port.port}: {port.service}</li>
                     ))}
                   </ul>
                 ) : (
-                  <span className="ml-2 text-sm text-gray-500">nenhuma porta aberta</span>
+                  <em>nenhuma porta aberta</em>
                 )}
               </li>
             ))}
