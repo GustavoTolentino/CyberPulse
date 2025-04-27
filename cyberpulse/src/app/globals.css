@@ -1,4 +1,3 @@
-/* Variáveis de cores */
 :root {
   --background: #f3f4f6;
   --foreground: #111827;
@@ -17,7 +16,6 @@ body {
   font-family: 'Segoe UI', Arial, sans-serif;
 }
 
-/* Container central */
 .card {
   background: var(--card-bg);
   padding: 24px;
@@ -50,7 +48,6 @@ body {
   border-radius: 6px;
 }
 
-/* Botão principal */
 .btn {
   background: var(--primary);
   color: white;
@@ -61,15 +58,16 @@ body {
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .btn:hover {
   background: var(--primary-dark);
 }
+
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* Barra de progresso indeterminada */
 .progress {
   position: relative;
   height: 8px;
@@ -78,6 +76,7 @@ body {
   overflow: hidden;
   margin: 16px 0;
 }
+
 .progress::before {
   content: '';
   position: absolute;
@@ -88,12 +87,12 @@ body {
   background: var(--primary);
   animation: loading 1s infinite;
 }
+
 @keyframes loading {
   0% { left: -40%; }
   100% { left: 100%; }
 }
 
-/* Estilos de erro e resultados */
 .error {
   color: var(--error);
   margin-top: 12px;
@@ -118,4 +117,18 @@ body {
 
 .results em {
   color: var(--border);
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #1f2937;
+  border: none;
+  padding: 12px 24px;
+  margin-left: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-secondary:hover {
+  background: #d1d5db;
 }

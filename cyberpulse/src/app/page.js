@@ -1,30 +1,58 @@
 'use client'
 import './globals.css'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 export default function Home() {
   const [range, setRange] = useState('192.168.1.0/24')
+  const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
-  const [devices, setDevices] = useState(null)
   const [error, setError] = useState(null)
+  const cancelRef = useRef(false)
 
-  const iniciarAnalise = async () => {
-    console.log(`Iniciando análise para range: ${range}`)
+  const chunk = (array, size) =>
+    array.reduce((acc, _, i) =>
+      i % size === 0 ? [...acc, array.slice(i, i + size)] : acc,
+    [])
+
+  async function iniciarAnalise() {
     setLoading(true)
-    setDevices(null)
+    setResults([])
     setError(null)
+    cancelRef.current = false
+
+    const [network] = range.split('/')
+    const octets = network.split('.')
+    const base = octets.slice(0, 3).join('.') + '.'
+    const ips = Array.from({ length: 256 }, (_, i) => `${base}${i}`)
+    const batches = chunk(ips, 5)
+
     try {
-      const res = await fetch(`/api/scan?range=${encodeURIComponent(range)}`)
-      console.log('Fetch concluído, status:', res.status)
-      const data = await res.json()
-      console.log('Dados recebidos:', data)
-      setDevices(data.devices)
+      for (const batch of batches) {
+        if (cancelRef.current) break
+        const responses = await Promise.all(
+          batch.map(ip =>
+            fetch(`/api/scan?range=${encodeURIComponent(ip)}`)
+          )
+        )
+        const data = await Promise.all(
+          responses.map((r, idx) =>
+            r.ok
+              ? r.json()
+              : { ip: batch[idx], status: 'down', openPorts: [], error: `HTTP ${r.status}` }
+          )
+        )
+        setResults(prev => [...prev, ...data])
+      }
     } catch (err) {
-      console.error('Erro na análise:', err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  function cancelar() {
+    cancelRef.current = true
+    setLoading(false)
   }
 
   return (
@@ -32,47 +60,50 @@ export default function Home() {
       <h1>Analisador de Vulnerabilidades</h1>
 
       <div className="form-group">
-        <label htmlFor="range">Intervalo de rede:</label>
+        <label>Intervalo:</label>
         <input
-          id="range"
-          type="text"
           value={range}
           onChange={e => setRange(e.target.value)}
         />
       </div>
 
-      <button onClick={iniciarAnalise} disabled={loading} className="btn">
-        {loading ? 'Analisando...' : 'Iniciar Análise'}
-      </button>
+      <div className="button-group">
+        <button
+          onClick={iniciarAnalise}
+          disabled={loading}
+          className="btn"
+        >
+          {loading ? 'Analisando...' : 'Iniciar Análise'}
+        </button>
+        {loading && (
+          <button
+            onClick={cancelar}
+            className="btn-secondary"
+          >
+            Cancelar
+          </button>
+        )}
+      </div>
 
-      {/* Barra de progresso indeterminada */}
       {loading && <div className="progress"></div>}
-
-      {/* Erro */}
       {error && <p className="error">{error}</p>}
 
-      {/* Resultados */}
-      {devices && (
-        <div className="results">
-          <h2>Resultados:</h2>
-          <ul>
-            {devices.map((device, idx) => (
-              <li key={idx}>
-                <strong>{device.ip}</strong> — {device.status}
-                {device.openPorts.length > 0 ? (
-                  <ul>
-                    {device.openPorts.map((port, j) => (
-                      <li key={j}>Porta {port.port}: {port.service}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <em>nenhuma porta aberta</em>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div className="results">
+        {results.map(({ ip, status, openPorts, error }) => (
+          <div key={ip}>
+            <strong>{ip}</strong> — {error || status}
+            {openPorts.length ? (
+              <ul>
+                {openPorts.map(p => (
+                  <li key={p.port}>{p.port}/{p.service}</li>
+                ))}
+              </ul>
+            ) : (
+              <em>  nenhuma porta aberta</em>
+            )}
+          </div>
+        ))}
+      </div>
     </main>
   )
 }
