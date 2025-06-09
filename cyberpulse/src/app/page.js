@@ -2,7 +2,7 @@
 import './globals.css'
 import { useEffect, useState, useRef } from 'react'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell
 } from 'recharts'
 
 export default function Home() {
@@ -14,19 +14,22 @@ export default function Home() {
   const [fastMode, setFastMode] = useState(false)
   const cancelRef = useRef(false)
 
+  const fastScanIPs = [
+    '172.16.43.1','172.16.43.19','172.16.43.21','172.16.43.43','172.16.43.57',
+    '172.16.43.60','172.16.43.61','172.16.43.80','172.16.43.85','172.16.43.101',
+    '172.16.43.105','172.16.43.120','172.16.43.140','172.16.43.146','172.16.43.160',
+    '172.16.43.180','172.16.43.202','172.16.43.227','172.16.43.245','172.16.43.253',
+    '172.16.43.254'
+  ]
+
   useEffect(() => {
     setResumo({ total: 0, comPortas: 0, comVulns: 0, escaneados: 0 })
     setResults([])
   }, [fastMode])
 
-  const fastScanIPs = [
-    '172.16.43.1','172.16.43.19','172.16.43.21','172.16.43.43','172.16.43.57','172.16.43.60','172.16.43.61','172.16.43.80','172.16.43.85','172.16.43.101','172.16.43.105','172.16.43.120','172.16.43.140','172.16.43.146','172.16.43.160','172.16.43.180','172.16.43.202','172.16.43.227','172.16.43.245','172.16.43.253','172.16.43.254'
-  ]
-
   const chunk = (array, size) =>
     array.reduce((acc, _, i) =>
-      i % size === 0 ? [...acc, array.slice(i, i + size)] : acc,
-    [])
+      i % size === 0 ? [...acc, array.slice(i, i + size)] : acc, [])
 
   async function iniciarAnalise() {
     setLoading(true)
@@ -90,7 +93,7 @@ export default function Home() {
   ]
 
   const resultadoData = [
-    { name: 'Escaneados', value: resumo.escaneados - resumo.comPortas, fill: '#e9ecef' }, // escala comum com escaneados
+    { name: 'Escaneados', value: resumo.escaneados - resumo.comPortas, fill: '#e9ecef' },
     { name: 'IPs com Portas', value: resumo.comPortas, fill: '#28a745' },
     { name: 'IPs com Vulns', value: resumo.comVulns, fill: '#dc3545' }
   ]
@@ -98,7 +101,7 @@ export default function Home() {
   function copiarResultado() {
     const texto = results.map(r => {
       const portas = r.openPorts.map(p => `${p.port}/${p.service}`).join(', ')
-      const vulns = r.vulnerabilities?.map(v => `${v.id}`).join(', ') || ''
+      const vulns = r.vulnerabilities?.map(v => v.id).join(', ') || ''
       return `${r.ip} — ${r.error || r.status} — Portas: ${portas || 'nenhuma'} — Vulns: ${vulns || 'nenhuma'}`
     }).join('\n')
     navigator.clipboard.writeText(texto)
@@ -106,14 +109,13 @@ export default function Home() {
 
   return (
     <main className="card" style={{ maxWidth: '1100px', margin: '2rem auto', padding: '0 2rem' }}>
-      <h1>Analisador de Vulnerabilidades</h1>
+      <h1 style={{ paddingTop: '20px' }}>
+        <span style={{ fontFamily: "'Quantico', sans-serif" }}>CYBERPULSE</span> Analisador de Vulnerabilidades
+      </h1>
 
       <div className="form-group">
         <label>Intervalo:</label>
-        <input
-          value={range}
-          onChange={e => setRange(e.target.value)}
-        />
+        <input value={range} onChange={e => setRange(e.target.value)} />
       </div>
 
       <div className="form-group switch-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -125,18 +127,11 @@ export default function Home() {
       </div>
 
       <div className="button-group">
-        <button
-          onClick={iniciarAnalise}
-          disabled={loading}
-          className="btn"
-        >
+        <button onClick={iniciarAnalise} disabled={loading} className="btn">
           {loading ? 'Analisando...' : 'Iniciar Análise'}
         </button>
         {loading && (
-          <button
-            onClick={cancelar}
-            className="btn-secondary"
-          >
+          <button onClick={cancelar} className="btn-secondary">
             Cancelar
           </button>
         )}
@@ -154,13 +149,14 @@ export default function Home() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="value" data={progressoData}>
+            <Bar dataKey="value">
               {progressoData.map((entry, index) => (
-                <cell key={`cell-${index}`} fill={entry.fill} />
+                <Cell key={`cell-${index}`} fill={entry.fill} />
               ))}
             </Bar>
           </BarChart>
         </div>
+
         <div className="chart-container">
           <h3>Resultados</h3>
           <BarChart width={400} height={250} data={resultadoData}>
@@ -169,9 +165,9 @@ export default function Home() {
             <YAxis domain={[0, resumo.escaneados]} />
             <Tooltip />
             <Legend />
-            <Bar dataKey="value" data={resultadoData}>
+            <Bar dataKey="value">
               {resultadoData.map((entry, index) => (
-                <cell key={`cell-${index}`} fill={entry.fill} />
+                <Cell key={`cell-${index}`} fill={entry.fill} />
               ))}
             </Bar>
           </BarChart>
@@ -179,14 +175,18 @@ export default function Home() {
       </div>
 
       {results.length > 0 && (
-        <button title="Copiar resultados" onClick={copiarResultado} style={{ float: 'right', marginTop: '1rem', fontSize: '1rem', border: 'none', background: 'transparent', cursor: 'pointer' }}>
+        <button
+          title="Copiar resultados"
+          onClick={copiarResultado}
+          style={{ float: 'right', marginTop: '1rem', fontSize: '1rem', border: 'none', background: 'transparent', cursor: 'pointer' }}
+        >
           📄
         </button>
       )}
 
       <div className="results" style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '3rem' }}>
         {results.map(({ ip, status, openPorts, vulnerabilities, error }, idx) => (
-          <div key={`${ip}-${idx}-${Date.now()}`}>
+          <div key={`${ip}-${idx}`}>
             <strong>{ip}</strong> — {error || status}
             {openPorts.length ? (
               <ul>

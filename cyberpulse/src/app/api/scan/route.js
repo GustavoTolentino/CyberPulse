@@ -17,7 +17,7 @@ export async function GET(request) {
   try {
     const { stdout } = await execFileAsync(
       NMAP_CMD,
-      ['-Pn', '-T4', '-p', PORT_LIST, '--script', 'vuln', '-oX', '-', ip]
+      ['-sS', '-T5', '-p', PORT_LIST, '--script', 'vuln', '-oX', '-', ip]
     )
     const parsed = await parseStringPromise(stdout, { explicitArray: false })
     const hosts = parsed.nmaprun.host
