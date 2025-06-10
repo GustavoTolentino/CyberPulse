@@ -12,6 +12,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [fastMode, setFastMode] = useState(false)
+  const [history, setHistory] = useState([])
+  const [currentScanIndex, setCurrentScanIndex] = useState(-1)
   const cancelRef = useRef(false)
 
   const fastScanIPs = [
@@ -49,12 +51,11 @@ export default function Home() {
 
     try {
       let totalEscaneados = 0
+      let allResults = []
       for (const batch of batches) {
         if (cancelRef.current) break
         const responses = await Promise.all(
-          batch.map(ip =>
-            fetch(`/api/scan?range=${encodeURIComponent(ip)}`)
-          )
+          batch.map(ip => fetch(`/api/scan?range=${encodeURIComponent(ip)}`))
         )
         const data = await Promise.all(
           responses.map((r, idx) =>
@@ -67,6 +68,7 @@ export default function Home() {
         const comVulns = data.filter(d => d.vulnerabilities?.length > 0)
 
         totalEscaneados += data.length
+        allResults = [...allResults, ...data]
         setResults(prev => [...prev, ...data])
         setResumo(prev => ({
           total: ips.length,
@@ -75,11 +77,31 @@ export default function Home() {
           comVulns: prev.comVulns + comVulns.length,
         }))
       }
+      salvarCSV(allResults)
+      setHistory(prev => [...prev, { results: allResults, resumo: { ...resumo } }])
+      setCurrentScanIndex(history.length)
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  function salvarCSV(data) {
+    const headers = ['IP', 'Status', 'Portas', 'Vulnerabilidades']
+    const linhas = data.map(r => {
+      const portas = r.openPorts.map(p => `${p.port}/${p.service}`).join(', ')
+      const vulns = r.vulnerabilities?.map(v => v.id).join(', ') || ''
+      return `${r.ip},${r.error || r.status},${portas},${vulns}`
+    })
+    const csvContent = [headers.join(','), ...linhas].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `scan-${new Date().toISOString()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   function cancelar() {
@@ -105,6 +127,16 @@ export default function Home() {
       return `${r.ip} — ${r.error || r.status} — Portas: ${portas || 'nenhuma'} — Vulns: ${vulns || 'nenhuma'}`
     }).join('\n')
     navigator.clipboard.writeText(texto)
+  }
+
+  function navegarScan(delta) {
+    const newIndex = currentScanIndex + delta
+    if (newIndex >= 0 && newIndex < history.length) {
+      const scan = history[newIndex]
+      setResults(scan.results)
+      setResumo(scan.resumo)
+      setCurrentScanIndex(newIndex)
+    }
   }
 
   return (
@@ -135,6 +167,8 @@ export default function Home() {
             Cancelar
           </button>
         )}
+        <button onClick={() => navegarScan(-1)} disabled={currentScanIndex <= 0}>⬅ Anterior</button>
+        <button onClick={() => navegarScan(1)} disabled={currentScanIndex >= history.length - 1}>Próximo ➡</button>
       </div>
 
       {loading && <div className="progress"></div>}
