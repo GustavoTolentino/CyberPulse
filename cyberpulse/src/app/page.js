@@ -11,23 +11,14 @@ export default function Home() {
   const [resumo, setResumo] = useState({ total: 0, comPortas: 0, comVulns: 0, escaneados: 0 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [fastMode, setFastMode] = useState(false)
   const [history, setHistory] = useState([])
   const [currentScanIndex, setCurrentScanIndex] = useState(-1)
   const cancelRef = useRef(false)
 
-  const fastScanIPs = [
-    '172.16.43.1','172.16.43.19','172.16.43.21','172.16.43.43','172.16.43.57',
-    '172.16.43.60','172.16.43.61','172.16.43.80','172.16.43.85','172.16.43.101',
-    '172.16.43.105','172.16.43.120','172.16.43.140','172.16.43.146','172.16.43.160',
-    '172.16.43.180','172.16.43.202','172.16.43.227','172.16.43.245','172.16.43.253',
-    '172.16.43.254'
-  ]
-
   useEffect(() => {
     setResumo({ total: 0, comPortas: 0, comVulns: 0, escaneados: 0 })
     setResults([])
-  }, [fastMode])
+  }, [])
 
   const chunk = (array, size) =>
     array.reduce((acc, _, i) =>
@@ -40,14 +31,19 @@ export default function Home() {
     setError(null)
     cancelRef.current = false
 
-    const [network] = range.split('/')
-    const octets = network.split('.')
-    const base = octets.slice(0, 3).join('.') + '.'
-    const ips = fastMode
-      ? fastScanIPs
-      : Array.from({ length: 256 }, (_, i) => `${base}${i}`)
+    const isCIDR = range.includes('/')
+    let ips = []
 
-    const batches = chunk(ips, 5)
+    if (!isCIDR) {
+      ips = [range]
+    } else {
+      const [network] = range.split('/')
+      const octets = network.split('.')
+      const base = octets.slice(0, 3).join('.') + '.'
+      ips = Array.from({ length: 256 }, (_, i) => `${base}${i}`)
+    }
+
+    const batches = chunk(ips, isCIDR ? 5 : 1)
 
     try {
       let totalEscaneados = 0
@@ -55,7 +51,9 @@ export default function Home() {
       for (const batch of batches) {
         if (cancelRef.current) break
         const responses = await Promise.all(
-          batch.map(ip => fetch(`/api/scan?range=${encodeURIComponent(ip)}`))
+          batch.map(ip =>
+            fetch(`/api/scan?range=${encodeURIComponent(ip)}${!isCIDR ? '&modo=fast' : ''}`)
+          )
         )
         const data = await Promise.all(
           responses.map((r, idx) =>
@@ -150,15 +148,7 @@ export default function Home() {
         <input value={range} onChange={e => setRange(e.target.value)} />
       </div>
 
-      <div className="form-group switch-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <label className="switch">
-          <input type="checkbox" checked={fastMode} onChange={() => setFastMode(!fastMode)} />
-          <span className="slider round"></span>
-        </label>
-        <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>Fast Scan</span>
-      </div>
-
-      <div className="button-group">
+      <div className="button-group" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
         <button onClick={iniciarAnalise} disabled={loading} className="btn">
           {loading ? 'Analisando...' : 'Iniciar Análise'}
         </button>
@@ -167,8 +157,6 @@ export default function Home() {
             Cancelar
           </button>
         )}
-        <button onClick={() => navegarScan(-1)} disabled={currentScanIndex <= 0}>⬅ Anterior</button>
-        <button onClick={() => navegarScan(1)} disabled={currentScanIndex >= history.length - 1}>Próximo ➡</button>
       </div>
 
       {loading && <div className="progress"></div>}
@@ -208,42 +196,38 @@ export default function Home() {
         </div>
       </div>
 
-      {results.length > 0 && (
-        <button
-          title="Copiar resultados"
-          onClick={copiarResultado}
-          style={{ float: 'right', marginTop: '1rem', fontSize: '1rem', border: 'none', background: 'transparent', cursor: 'pointer' }}
-        >
-          📄
-        </button>
-      )}
-
-      <div className="results" style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '3rem' }}>
-        {results.map(({ ip, status, openPorts, vulnerabilities, error }, idx) => (
-          <div key={`${ip}-${idx}`}>
-            <strong>{ip}</strong> — {error || status}
-            {openPorts.length ? (
-              <ul>
-                {openPorts.map((p, i) => (
-                  <li key={`${ip}-${p.port}-${i}`}>{p.port}/{p.service}</li>
-                ))}
-              </ul>
-            ) : (
-              <em> nenhuma porta aberta</em>
-            )}
-            {vulnerabilities?.length > 0 && (
-              <details>
-                <summary>Vulnerabilidades encontradas</summary>
-                <ul>
-                  {vulnerabilities.map((v, i) => (
-                    <li key={`${ip}-vuln-${i}`}>{v.port}: {v.id} — {v.output}</li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </div>
-        ))}
+      <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+        <button onClick={() => navegarScan(-1)} disabled={currentScanIndex <= 0} className="btn-secondary">⬅ Anterior</button>
+        <button onClick={() => navegarScan(1)} disabled={currentScanIndex >= history.length - 1} className="btn-secondary">Próximo ➡</button>
+        {results.length > 0 && (
+          <button onClick={copiarResultado} className="btn">📋 Copiar Resultados</button>
+        )}
       </div>
+
+      {results.length > 0 && (
+  <div style={{ marginTop: '2rem' }} className='results'>
+    <h2>Logs</h2>
+    <ul className="log-list">
+      {results.map((r, i) => (
+        <li key={i}>
+          <div>
+            <strong>{r.ip}</strong> — {r.error || r.status} — Portas: {r.openPorts.map(p => `${p.port}/${p.service}`).join(', ') || 'nenhuma'}
+          </div>
+          {r.vulnerabilities?.length > 0 ? (
+            <ul style={{ paddingLeft: '1.5rem', marginTop: '0.2rem' }}>
+              {r.vulnerabilities.map((v, idx) => (
+                <li key={idx} style={{ listStyleType: 'disc' }}>🛑 {v.id}</li>
+              ))}
+            </ul>
+          ) : (
+            <div style={{ paddingLeft: '1.5rem' }}>Vulns: nenhuma</div>
+          )}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+
     </main>
   )
 }
