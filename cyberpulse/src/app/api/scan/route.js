@@ -2,7 +2,7 @@ import { parseStringPromise } from 'xml2js'
 import { promisify } from 'util'
 import { execFile } from 'child_process'
 
-const NMAP_CMD = "C:\\Program Files (x86)\\Nmap\\nmap.exe"
+const NMAP_CMD = "D:\\Program Files (x86)\\Nmap\\nmap.exe"
 const execFileAsync = promisify(execFile)
 const COMMON_PORTS = [21, 22, 23, 25, 53, 67, 3000, 8080]
 const PORT_LIST = COMMON_PORTS.join(',')

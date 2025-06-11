@@ -15,11 +15,7 @@ export default function Home() {
   const [currentScanIndex, setCurrentScanIndex] = useState(-1)
   const cancelRef = useRef(false)
 
-  useEffect(() => {
-    setResumo({ total: 0, comPortas: 0, comVulns: 0, escaneados: 0 })
-    setResults([])
-  }, [])
-
+  // Divida os IPs em batches de acordo com o tamanho da rede
   const chunk = (array, size) =>
     array.reduce((acc, _, i) =>
       i % size === 0 ? [...acc, array.slice(i, i + size)] : acc, [])
@@ -64,7 +60,6 @@ export default function Home() {
         )
         const comPortas = data.filter(d => d.openPorts.length > 0)
         const comVulns = data.filter(d => d.vulnerabilities?.length > 0)
-
         totalEscaneados += data.length
         allResults = [...allResults, ...data]
         setResults(prev => [...prev, ...data])
@@ -75,9 +70,10 @@ export default function Home() {
           comVulns: prev.comVulns + comVulns.length,
         }))
       }
+
       salvarCSV(allResults)
       setHistory(prev => [...prev, { results: allResults, resumo: { ...resumo } }])
-      setCurrentScanIndex(history.length)
+      setCurrentScanIndex(history.length) // Corrigir aqui
     } catch (err) {
       setError(err.message)
     } finally {
@@ -85,6 +81,7 @@ export default function Home() {
     }
   }
 
+  // Função para salvar resultados em CSV
   function salvarCSV(data) {
     const headers = ['IP', 'Status', 'Portas', 'Vulnerabilidades']
     const linhas = data.map(r => {
@@ -102,6 +99,7 @@ export default function Home() {
     URL.revokeObjectURL(url)
   }
 
+  // Função para cancelar a análise
   function cancelar() {
     cancelRef.current = true
     setLoading(false)
@@ -162,7 +160,7 @@ export default function Home() {
       {loading && <div className="progress"></div>}
       {error && <p className="error">{error}</p>}
 
-      <div className="chart-row" style={{ display: 'flex', gap: '2rem' }}>
+      <div className="chart-row" style={{ display: 'flex', gap: '2rem', alignItems: 'center', justifyContent: 'center' }}>
         <div className="chart-container">
           <h3>Progresso</h3>
           <BarChart width={400} height={250} data={progressoData}>
@@ -196,38 +194,47 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+      <div className="pagination-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1.5rem', paddingBottom: '4rem' }}>
         <button onClick={() => navegarScan(-1)} disabled={currentScanIndex <= 0} className="btn-secondary">⬅ Anterior</button>
         <button onClick={() => navegarScan(1)} disabled={currentScanIndex >= history.length - 1} className="btn-secondary">Próximo ➡</button>
         {results.length > 0 && (
-          <button onClick={copiarResultado} className="btn">📋 Copiar Resultados</button>
+          <button onClick={copiarResultado} className="btn" style={{ marginLeft: '4rem' }}>📋 Copiar Resultados</button>
         )}
       </div>
 
       {results.length > 0 && (
-  <div style={{ marginTop: '2rem' }} className='results'>
-    <h2>Logs</h2>
-    <ul className="log-list">
-      {results.map((r, i) => (
-        <li key={i}>
-          <div>
-            <strong>{r.ip}</strong> — {r.error || r.status} — Portas: {r.openPorts.map(p => `${p.port}/${p.service}`).join(', ') || 'nenhuma'}
-          </div>
-          {r.vulnerabilities?.length > 0 ? (
-            <ul style={{ paddingLeft: '1.5rem', marginTop: '0.2rem' }}>
-              {r.vulnerabilities.map((v, idx) => (
-                <li key={idx} style={{ listStyleType: 'disc' }}>🛑 {v.id}</li>
-              ))}
-            </ul>
-          ) : (
-            <div style={{ paddingLeft: '1.5rem' }}>Vulns: nenhuma</div>
-          )}
-        </li>
-      ))}
-    </ul>
-  </div>
-)}
-
+        <div style={{ marginTop: '2rem', paddingBottom: '4rem' }} className='results'>
+          <h2>Logs</h2>
+          <ul className="log-list">
+            {results.map((r, i) => (
+              <li key={i}>
+                <div>
+                  <strong>{r.ip}</strong> — {r.error || r.status} — Portas:
+                  {r.openPorts.map((p, index) => (
+                    <span key={index}>
+                      <strong>{p.port}</strong>/{p.service}
+                    </span>
+                  )).join(', ') || 'nenhuma'}
+                </div>
+                {r.vulnerabilities?.length > 0 ? (
+                  <ul style={{ paddingLeft: '1.5rem', marginTop: '0.2rem' }}>
+                    {r.vulnerabilities.map((v, idx) => (
+                      <li key={idx} style={{ listStyleType: 'disc' }}>
+                        🛑 CVE:
+                        <a href={`https://www.google.com/search?q=${encodeURIComponent(v.id)}`} target="_blank" rel="noopener noreferrer">
+                          {v.id}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ paddingLeft: '1.5rem' }}>Vulns: nenhuma</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </main>
   )
 }
