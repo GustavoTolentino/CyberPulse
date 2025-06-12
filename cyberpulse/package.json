@@ -9,8 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "bootstrap": "^5.3.6",
     "next": "15.3.1",
     "react": "^19.0.0",
+    "react-bootstrap": "^2.10.10",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.3",
     "xml2js": "^0.6.2"
